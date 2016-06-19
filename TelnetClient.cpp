@@ -7,7 +7,8 @@
 #include <strsafe.h>
 #include <iostream>
 
-#define DEFAULT_PORT            "8765"          // Default server port
+#define DEFAULT_SERVER          "127.0.0.1"
+#define DEFAULT_PORT            "8765"          
 #define DEFAULT_BUFFER_LEN      4096            // Default send/recv buffer length
 
 
@@ -18,13 +19,12 @@ int main(int argc, char **argv)
     struct addrinfo *results = NULL,
 					*addrptr = NULL,
 					hints;
-    char            *server_name = "127.0.0.1",
+	char            *server_name = DEFAULT_SERVER,
 					*port = DEFAULT_PORT,
-					Buffer[DEFAULT_BUFFER_LEN],
-					hoststr[NI_MAXHOST],
-					servstr[NI_MAXSERV];
+					Buffer[DEFAULT_BUFFER_LEN];
     int              retval;
 
+	printf("TELNET Client\n");
 
     // Load Winsock
     if ((retval = WSAStartup(MAKEWORD(2,2), &wsaData)) != 0)
@@ -39,7 +39,6 @@ int main(int argc, char **argv)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol =  IPPROTO_TCP;
-
     retval = getaddrinfo(server_name, port, &hints, &results);
     if (retval != 0)
     {
@@ -52,6 +51,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
+	
     addrptr = results;
     conn_socket = socket(addrptr->ai_family, addrptr->ai_socktype, addrptr->ai_protocol);
     if (conn_socket == INVALID_SOCKET)
@@ -59,38 +59,23 @@ int main(int argc, char **argv)
         fprintf(stderr, "socket failed: %d\n", WSAGetLastError());
         goto cleanup;
     }
-    retval = getnameinfo(
-                        addrptr->ai_addr,
-                        (socklen_t)addrptr->ai_addrlen,
-                        hoststr,
-                        NI_MAXHOST,
-                        servstr,
-                        NI_MAXSERV,
-                        NI_NUMERICHOST | NI_NUMERICSERV
-                        );
-    if (retval != 0)
-    {
-        fprintf(stderr, "getnameinfo failed: %d\n", retval);
-        goto cleanup;
-    }
 
-    printf("Client attempting connection to: %s port: %s\n", hoststr, servstr);
+
     retval = connect(conn_socket, addrptr->ai_addr, (int)addrptr->ai_addrlen);
     if (retval == SOCKET_ERROR)
     {
         closesocket(conn_socket);
         conn_socket = INVALID_SOCKET;
-		exit(1);
     }
     freeaddrinfo(results);
     results = NULL;
     if (conn_socket == INVALID_SOCKET)
     {
-        printf("Unable to establish connection...\n");
+        printf("Unable to connect to %s : %s\n", server_name, port);
         goto cleanup;
     }
     else
-        printf("Connection established...\n");
+        printf("Connected to %s : %s\n", server_name, port);
 
 
     while (1)
